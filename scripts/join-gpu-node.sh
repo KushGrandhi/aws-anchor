@@ -47,11 +47,16 @@ echo "==> Pulling model: $MODEL"
 OLLAMA_HOST="${TS_IP}:11434" ollama pull "$MODEL"
 
 echo
-echo "Node ready. Add this to litellm/config.yaml on the anchor:"
+echo "Node ready. Add this under 'models:' in gateway/models.yaml on the anchor:"
 echo
-echo "  - model_name: local-chat"
-echo "    litellm_params:"
-echo "      model: ollama_chat/${MODEL}"
-echo "      api_base: http://${TS_IP}:11434"
+echo "  - name: \"local-${HOSTNAME_TS}\""
+echo "    provider: \"custom_openai\""
+echo "    model_id: \"${MODEL}\""
+echo "    api_base: \"http://${TS_IP}:11434/v1\""
+echo "    timeout_seconds: 120"
+echo "    max_retries: 0"
+echo "    cache_enabled: false"
+echo "    fallbacks: [\"claude-haiku\"]"
 echo
-echo "Then on the anchor: docker compose restart litellm"
+echo "Then hot-reload the gateway (no restart needed):"
+echo "  curl -X POST http://127.0.0.1:5000/v1/models/reload -H \"Authorization: Bearer <gateway key>\""

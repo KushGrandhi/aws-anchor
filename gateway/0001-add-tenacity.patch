@@ -1,0 +1,12 @@
+diff --git a/requirements.txt b/requirements.txt
+index 0cdda31..5bfe96b 100644
+--- a/requirements.txt
++++ b/requirements.txt
+@@ -5,6 +5,7 @@ gunicorn==21.2.0
+ 
+ # LLM Integration
+ litellm>=1.40.0,<1.70.0  # Pin for Python 3.9 compatibility
++tenacity>=8.2  # required by litellm when num_retries/fallbacks are used
+ 
+ # Configuration
+ python-dotenv==1.0.0

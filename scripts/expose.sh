@@ -6,10 +6,10 @@
 set -euo pipefail
 
 sudo tailscale serve --bg --https=443  http://127.0.0.1:3000   # Open WebUI
-sudo tailscale serve --bg --https=8443 http://127.0.0.1:4000   # LiteLLM gateway
+sudo tailscale serve --bg --https=8443 http://127.0.0.1:5000   # llm_routing_server gateway
 
 NAME=$(tailscale status --json | grep -m1 '"DNSName"' | cut -d'"' -f4 | sed 's/\.$//')
 echo
 echo "From any device on your tailnet:"
 echo "  Chat UI : https://${NAME}"
-echo "  Gateway : https://${NAME}:8443/v1   (Authorization: Bearer <LITELLM_MASTER_KEY>)"
+echo "  Gateway : https://${NAME}:8443/v1   (Authorization: Bearer <your gateway key>)"

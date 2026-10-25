@@ -9,19 +9,25 @@ if [[ -f .env ]]; then
 fi
 
 rand() { openssl rand -hex "$1"; }
+PERSONAL_KEY="gw-$(rand 24)"   # for you: scripts, Jarvis, editors
+WEBUI_KEY="gw-$(rand 24)"      # used only by Open WebUI (separate key = separate usage stats)
 
 cat > .env <<EOF
-LITELLM_MASTER_KEY=sk-$(rand 24)
-POSTGRES_PASSWORD=$(rand 24)
+# Keys clients use to call the gateway (comma-separated)
+GATEWAY_API_KEYS=${PERSONAL_KEY},${WEBUI_KEY}
+WEBUI_GATEWAY_KEY=${WEBUI_KEY}
 WEBUI_SECRET_KEY=$(rand 32)
 
+# Provider keys — fill these in
 ANTHROPIC_API_KEY=
 OPENAI_API_KEY=
+GEMINI_API_KEY=
+GROQ_API_KEY=
 EOF
 chmod 600 .env
 
 echo "Created .env. Now add your ANTHROPIC_API_KEY:"
 echo "  nano .env"
 echo
-echo "Your gateway master key (save it in your password manager):"
-grep LITELLM_MASTER_KEY .env | cut -d= -f2
+echo "Your personal gateway key (save it in your password manager):"
+echo "  ${PERSONAL_KEY}"

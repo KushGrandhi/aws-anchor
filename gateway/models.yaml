@@ -1,0 +1,65 @@
+# Model registry for YOUR anchor (mounted over the gateway repo's example config).
+# Edit, then hot-reload without restarting:
+#   curl -X POST https://anchor.<tailnet>.ts.net:8443/v1/models/reload -H "Authorization: Bearer <key>"
+#
+# Notes:
+# - Always give model_id a provider prefix (anthropic/, gemini/, groq/...). The gateway's
+#   pinned LiteLLM can't infer the provider for some bare Claude IDs.
+# - cache_enabled is OFF for chat models: with caching on, "regenerate" would return the
+#   identical cached answer. Turn it on for deterministic/batch-style models.
+
+models:
+  # ---------------------------------------------------------------------------
+  # Cloud models (work on day one)
+  # ---------------------------------------------------------------------------
+  - name: "claude-haiku"
+    provider: "anthropic"
+    model_id: "anthropic/claude-haiku-5-5"
+    timeout_seconds: 120
+    max_retries: 1
+    cache_enabled: false
+    description: "Fast and cheap: default for casual chat and Jarvis"
+
+  - name: "claude-sonnet"
+    provider: "anthropic"
+    model_id: "anthropic/claude-sonnet-5-5"
+    timeout_seconds: 300
+    max_retries: 1
+    cache_enabled: false
+    description: "Everyday heavy lifting: coding, writing, analysis"
+
+  - name: "claude-opus"
+    provider: "anthropic"
+    model_id: "anthropic/claude-opus-5-5"
+    timeout_seconds: 300
+    max_retries: 1
+    cache_enabled: false
+    description: "Hardest reasoning tasks"
+
+  # Optional extra providers — uncomment after adding the key to .env and
+  # checking the provider's current model ID.
+  # - name: "gemini-flash"
+  #   provider: "gemini"
+  #   model_id: "gemini/<current-flash-model-id>"
+  #   timeout_seconds: 60
+  #   cache_enabled: false
+
+  # ---------------------------------------------------------------------------
+  # GPU nodes (rented or home) — scripts/join-gpu-node.sh prints the block to paste.
+  # Reached over Tailscale. Falls back to Claude Haiku when the node is offline.
+  # ---------------------------------------------------------------------------
+  # - name: "local-chat"
+  #   provider: "custom_openai"
+  #   model_id: "qwen3:8b"
+  #   api_base: "http://100.x.y.z:11434/v1"
+  #   timeout_seconds: 120
+  #   max_retries: 0
+  #   cache_enabled: false
+  #   fallbacks: ["claude-haiku"]
+  #   description: "Local model on my GPU node"
+
+default_model: "claude-haiku"
+
+# Used when a model's own fallbacks are exhausted
+global_fallbacks:
+  - "claude-haiku"

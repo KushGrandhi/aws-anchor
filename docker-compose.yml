@@ -1,51 +1,63 @@
 # Anchor stack: the always-on "brain" of your personal LLM layer.
+# Gateway = your own llm_routing_server (cloned into ./gateway-src by scripts/bootstrap.sh).
 # Everything binds to 127.0.0.1 only — nothing is exposed to the public internet.
 # Remote access happens through Tailscale (see scripts/expose.sh).
 
 services:
-  postgres:
-    image: postgres:16-alpine
+  # Cache + rate-limit storage for the gateway. Internal network only, no published port.
+  redis:
+    image: redis:7-alpine
     restart: unless-stopped
-    environment:
-      POSTGRES_USER: llm
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: litellm
+    command: ["redis-server", "--save", "60", "1", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - redis_data:/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U llm -d litellm"]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # Gateway: one OpenAI-compatible endpoint for every app/device you own.
-  # Routes to cloud APIs today; add GPU nodes as backends later in litellm/config.yaml.
-  litellm:
-    image: ghcr.io/berriai/litellm:main-stable
+  # Your gateway: one OpenAI-compatible endpoint for every app/device you own.
+  # Routes to cloud APIs today; GPU nodes get added in gateway/models.yaml later.
+  gateway:
+    build: ./gateway-src
     restart: unless-stopped
     depends_on:
-      postgres:
+      redis:
         condition: service_healthy
-    command: ["--config", "/app/config.yaml", "--port", "4000"]
+    # Fewer workers than the repo default — sized for a 2 GB Lightsail instance.
+    command: ["gunicorn", "run:flask_application", "--bind", "0.0.0.0:5000",
+              "--workers", "2", "--threads", "4", "--timeout", "300",
+              "--access-logfile", "-", "--error-logfile", "-"]
     environment:
-      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
-      DATABASE_URL: postgresql://llm:${POSTGRES_PASSWORD}@postgres:5432/litellm
+      GATEWAY_API_KEYS: ${GATEWAY_API_KEYS}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      CACHE_ENABLED: "true"
+      CACHE_TYPE: redis
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      RATE_LIMIT_ENABLED: "true"
+      RATE_LIMIT_STORAGE_URI: redis://redis:6379
+      RATE_LIMIT_DEFAULT: "120 per minute"
     volumes:
-      - ./litellm/config.yaml:/app/config.yaml:ro
+      # The anchor's own model list overrides the repo's example config.
+      - ./gateway/models.yaml:/app/config/models.yaml:ro
+      - gateway_data:/app/data          # SQLite usage log
     ports:
-      - "127.0.0.1:4000:4000"
+      - "127.0.0.1:5000:5000"
 
   # Chat UI: your Claude-style interface, works on phone and desktop.
   open-webui:
     image: ghcr.io/open-webui/open-webui:main
     restart: unless-stopped
     depends_on:
-      - litellm
+      - gateway
     environment:
-      OPENAI_API_BASE_URL: http://litellm:4000/v1
-      OPENAI_API_KEY: ${LITELLM_MASTER_KEY}
+      OPENAI_API_BASE_URL: http://gateway:5000/v1
+      OPENAI_API_KEY: ${WEBUI_GATEWAY_KEY}
       ENABLE_OLLAMA_API: "false"
       WEBUI_SECRET_KEY: ${WEBUI_SECRET_KEY}
     volumes:
@@ -54,5 +66,6 @@ services:
       - "127.0.0.1:3000:8080"
 
 volumes:
-  pgdata:
+  redis_data:
+  gateway_data:
   webui:

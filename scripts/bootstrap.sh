@@ -35,6 +35,18 @@ fi
 usermod -aG docker "$TARGET_USER"
 systemctl enable --now docker
 
+echo "==> Fetching your gateway (llm_routing_server) into ./gateway-src"
+ANCHOR_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+GATEWAY_REPO="${GATEWAY_REPO:-https://github.com/KushGrandhi/llm_routing_server.git}"
+if [[ ! -d "$ANCHOR_DIR/gateway-src/.git" ]]; then
+  sudo -u "$TARGET_USER" git clone "$GATEWAY_REPO" "$ANCHOR_DIR/gateway-src"
+fi
+if ! grep -qi '^tenacity' "$ANCHOR_DIR/gateway-src/requirements.txt"; then
+  echo "!!  gateway-src/requirements.txt is missing 'tenacity' — chat calls with retries will fail."
+  echo "!!  Commit gateway/0001-add-tenacity.patch to your llm_routing_server repo, then:"
+  echo "!!    cd gateway-src && git pull"
+fi
+
 echo "==> Installing Tailscale"
 if ! command -v tailscale >/dev/null; then
   curl -fsSL https://tailscale.com/install.sh | sh
@@ -49,5 +61,5 @@ echo
 echo "Done. Next:"
 echo "  1. Log out and back in (so docker works without sudo)"
 echo "  2. bash scripts/gen-env.sh   and add your ANTHROPIC_API_KEY to .env"
-echo "  3. docker compose up -d"
+echo "  3. docker compose up -d --build"
 echo "  4. bash scripts/expose.sh"
