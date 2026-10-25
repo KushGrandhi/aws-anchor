@@ -5,6 +5,8 @@
 # Notes:
 # - Always give model_id a provider prefix (anthropic/, gemini/, groq/...). The gateway's
 #   pinned LiteLLM can't infer the provider for some bare Claude IDs.
+# - unsupported_params: current Claude models reject `temperature`; the gateway strips
+#   it even if a client (like Open WebUI) sends one. Needs llm_routing_server PR #1+.
 # - cache_enabled is OFF for chat models: with caching on, "regenerate" would return the
 #   identical cached answer. Turn it on for deterministic/batch-style models.
 
@@ -15,6 +17,7 @@ models:
   - name: "claude-haiku"
     provider: "anthropic"
     model_id: "anthropic/claude-haiku-5-5"
+    unsupported_params: ["temperature"]
     timeout_seconds: 120
     max_retries: 1
     cache_enabled: false
@@ -23,6 +26,7 @@ models:
   - name: "claude-sonnet"
     provider: "anthropic"
     model_id: "anthropic/claude-sonnet-5-5"
+    unsupported_params: ["temperature"]
     timeout_seconds: 300
     max_retries: 1
     cache_enabled: false
@@ -31,6 +35,7 @@ models:
   - name: "claude-opus"
     provider: "anthropic"
     model_id: "anthropic/claude-opus-5-5"
+    unsupported_params: ["temperature"]
     timeout_seconds: 300
     max_retries: 1
     cache_enabled: false
