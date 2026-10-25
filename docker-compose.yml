@@ -1,0 +1,58 @@
+# Anchor stack: the always-on "brain" of your personal LLM layer.
+# Everything binds to 127.0.0.1 only — nothing is exposed to the public internet.
+# Remote access happens through Tailscale (see scripts/expose.sh).
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: llm
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: litellm
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U llm -d litellm"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Gateway: one OpenAI-compatible endpoint for every app/device you own.
+  # Routes to cloud APIs today; add GPU nodes as backends later in litellm/config.yaml.
+  litellm:
+    image: ghcr.io/berriai/litellm:main-stable
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
+    environment:
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
+      DATABASE_URL: postgresql://llm:${POSTGRES_PASSWORD}@postgres:5432/litellm
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    volumes:
+      - ./litellm/config.yaml:/app/config.yaml:ro
+    ports:
+      - "127.0.0.1:4000:4000"
+
+  # Chat UI: your Claude-style interface, works on phone and desktop.
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    restart: unless-stopped
+    depends_on:
+      - litellm
+    environment:
+      OPENAI_API_BASE_URL: http://litellm:4000/v1
+      OPENAI_API_KEY: ${LITELLM_MASTER_KEY}
+      ENABLE_OLLAMA_API: "false"
+      WEBUI_SECRET_KEY: ${WEBUI_SECRET_KEY}
+    volumes:
+      - webui:/app/backend/data
+    ports:
+      - "127.0.0.1:3000:8080"
+
+volumes:
+  pgdata:
+  webui:
