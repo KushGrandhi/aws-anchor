@@ -10,6 +10,12 @@ add_aurora() {
   grep -q '^AURORA_SECRET=' .env || echo "AURORA_SECRET=$(rand 32)" >> .env
   grep -q '^AURORA_INVITE=' .env || echo "AURORA_INVITE=$(rand 8)" >> .env
   grep -q '^AURORA_PUBLIC_URL=' .env || echo "AURORA_PUBLIC_URL=" >> .env
+  # aurora won't start without its public address: fill it now if Tailscale is already up
+  if grep -q '^AURORA_PUBLIC_URL=$' .env && command -v tailscale >/dev/null; then
+    local name
+    name=$(tailscale status --json 2>/dev/null | grep -m1 '"DNSName"' | cut -d'"' -f4 | sed 's/\.$//')
+    [[ -n "$name" ]] && sed -i "s|^AURORA_PUBLIC_URL=$|AURORA_PUBLIC_URL=https://${name}:10000|" .env
+  fi
   grep -q '^AURORA_VERSION=' .env || echo "AURORA_VERSION=v0.9.0" >> .env
 }
 
