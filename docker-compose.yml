@@ -65,7 +65,27 @@ services:
     ports:
       - "127.0.0.1:3000:8080"
 
+  # Aurora: a screen your Claude draws on over MCP; each view gets a share link.
+  # The ONE public service: reached through Tailscale Funnel on :10000 (scripts/expose.sh).
+  # Using it needs a workspace key (minted with the invite code); share links are view-only.
+  # Built on the server from a release tag (change AURORA_VERSION to upgrade).
+  aurora:
+    build: https://github.com/KushGrandhi/aurora.git#${AURORA_VERSION:-v0.9.0}
+    image: aurora:${AURORA_VERSION:-v0.9.0}
+    restart: unless-stopped
+    environment:
+      AURORA_MODE: hosted
+      AURORA_SECRET: ${AURORA_SECRET}
+      AURORA_INVITE: ${AURORA_INVITE}
+      AURORA_PUBLIC_URL: ${AURORA_PUBLIC_URL}
+    volumes:
+      - aurora:/data
+    ports:
+      - "127.0.0.1:4317:4317"
+    mem_limit: 768m
+
 volumes:
   redis_data:
   gateway_data:
   webui:
+  aurora:

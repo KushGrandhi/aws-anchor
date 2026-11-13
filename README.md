@@ -159,3 +159,36 @@ If the server feels sluggish, check `free -h`. The fix is to snapshot it and lau
 3. **CloudWatch:** alarms on CPU and disk.
 4. **EC2 + VPC + IAM roles:** export a Lightsail snapshot to EC2 and rebuild it properly.
 5. **Terraform:** define the whole thing as code.
+
+---
+
+## Aurora — the one public service
+
+[Aurora](https://github.com/KushGrandhi/aurora) is a screen your Claude Code draws on over MCP. Each view it makes gets a
+view-only share link anyone can open. It is the **only** thing on anchor reachable from the internet, through
+**Tailscale Funnel** on port 10000. The chat UI, the gateway and Redis stay tailnet-only, and the Lightsail firewall
+stays closed. The image is built on the server from a release tag (the first build takes a few minutes and uses swap).
+
+**One time:**
+1. In the Tailscale admin console → **Access controls**, allow Funnel for this machine (the `funnel` node attribute).
+2. On the server:
+   ```bash
+   cd aws-anchor && git pull
+   bash scripts/gen-env.sh            # adds AURORA_SECRET and AURORA_INVITE to your existing .env
+   docker compose up -d --build aurora
+   bash scripts/expose.sh             # turns on Funnel, fills AURORA_PUBLIC_URL, prints how to connect
+   ```
+
+**Connect a Claude Code** (yours, or anyone you give the invite code to):
+```bash
+curl -s -X POST https://anchor.<tailnet>.ts.net:10000/api/keys -H 'content-type: application/json' -d '{"invite":"<AURORA_INVITE>"}'
+claude mcp add --transport http aurora https://anchor.<tailnet>.ts.net:10000/mcp --header "Authorization: Bearer <key>"
+```
+
+**Upgrade:** set `AURORA_VERSION` in `.env` to a newer tag, then `docker compose up -d --build aurora`.
+
+**Revoke everyone:** change `AURORA_SECRET` in `.env` and restart aurora (all keys stop working; views stay).
+
+**Your own domain later:** point `aurora.<domain>` at the static IP, put Caddy in front on 443, set `AURORA_PUBLIC_URL`
+to the new address. Keep Funnel on for a while so links already shared keep working.
+

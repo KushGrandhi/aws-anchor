@@ -3,12 +3,22 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+rand() { openssl rand -hex "$1"; }
+
+# Aurora's settings, added to an existing .env without touching the rest.
+add_aurora() {
+  grep -q '^AURORA_SECRET=' .env || echo "AURORA_SECRET=$(rand 32)" >> .env
+  grep -q '^AURORA_INVITE=' .env || echo "AURORA_INVITE=$(rand 8)" >> .env
+  grep -q '^AURORA_PUBLIC_URL=' .env || echo "AURORA_PUBLIC_URL=" >> .env
+  grep -q '^AURORA_VERSION=' .env || echo "AURORA_VERSION=v0.9.0" >> .env
+}
+
 if [[ -f .env ]]; then
-  echo ".env already exists — leaving it alone." >&2
+  add_aurora
+  echo ".env already exists — left your values alone, added any missing AURORA_* settings." >&2
+  echo "Aurora invite code (give it to people you want to let in): $(grep '^AURORA_INVITE=' .env | cut -d= -f2)"
   exit 0
 fi
-
-rand() { openssl rand -hex "$1"; }
 PERSONAL_KEY="gw-$(rand 24)"   # for you: scripts, Jarvis, editors
 WEBUI_KEY="gw-$(rand 24)"      # used only by Open WebUI (separate key = separate usage stats)
 
@@ -24,6 +34,7 @@ OPENAI_API_KEY=
 GEMINI_API_KEY=
 GROQ_API_KEY=
 EOF
+add_aurora
 chmod 600 .env
 
 echo "Created .env. Now add your ANTHROPIC_API_KEY:"
