@@ -200,6 +200,12 @@ Anyone holding a link can use that workspace: one link per app or person, revoke
 
 **Revoke everyone:** change `AURORA_SECRET` in `.env` and restart aurora (all keys stop working; views stay).
 
-**Your own domain later:** point `aurora.<domain>` at the static IP, put Caddy in front on 443, set `AURORA_PUBLIC_URL`
-to the new address. Keep Funnel on for a while so links already shared keep working.
+**Your own domain** (needed for ChatGPT, whose servers never connect to the Funnel address):
+1. DNS: an A record `aurora.<domain>` → the static IP.
+2. Lightsail → Networking → firewall: add HTTPS (443) and HTTP (80, for the certificate) from anywhere.
+3. On the server: in `.env` set `AURORA_DOMAIN=aurora.<domain>`, `PRIVATE_IP=$(hostname -I | cut -d' ' -f1)` and
+   `AURORA_PUBLIC_URL=https://aurora.<domain>`, then
+   `docker compose up -d aurora && docker compose --profile domain up -d caddy`.
+Caddy gets the certificate itself and writes no access logs. Keep Funnel on so links already shared keep working;
+personal links work on either address (same secret, new host).
 

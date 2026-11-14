@@ -84,7 +84,28 @@ services:
       - "127.0.0.1:4317:4317"
     mem_limit: 768m
 
+  # Caddy: aurora on its own domain (AURORA_DOMAIN, e.g. aurora.example.com) over 443 with automatic TLS, for MCP
+  # clients that can't reach the Funnel address (ChatGPT's servers never connect to *.ts.net:10000). Bound to the
+  # instance's private address only (Lightsail maps the static IP to it); tailscaled keeps its own :443 on the tailnet.
+  # Needs the Lightsail firewall open on 80 and 443. Off unless started: docker compose --profile domain up -d caddy
+  caddy:
+    image: caddy:2.10
+    profiles: ["domain"]
+    restart: unless-stopped
+    depends_on:
+      - aurora
+    environment:
+      AURORA_DOMAIN: ${AURORA_DOMAIN}
+    command: caddy reverse-proxy --from ${AURORA_DOMAIN} --to aurora:4317
+    ports:
+      - "${PRIVATE_IP:-0.0.0.0}:80:80"
+      - "${PRIVATE_IP:-0.0.0.0}:443:443"
+    volumes:
+      - caddy_data:/data
+    mem_limit: 128m
+
 volumes:
+  caddy_data:
   redis_data:
   gateway_data:
   webui:
