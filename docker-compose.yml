@@ -70,8 +70,8 @@ services:
   # Using it needs a workspace key (minted with the invite code); share links are view-only.
   # Built on the server from a release tag (change AURORA_VERSION to upgrade).
   aurora:
-    build: https://github.com/KushGrandhi/aurora.git#${AURORA_VERSION:-v0.9.0}
-    image: aurora:${AURORA_VERSION:-v0.9.0}
+    build: https://github.com/KushGrandhi/aurora.git#${AURORA_VERSION:-v0.9.1}
+    image: aurora:${AURORA_VERSION:-v0.9.1}
     restart: unless-stopped
     environment:
       AURORA_MODE: hosted

@@ -185,6 +185,17 @@ curl -s -X POST https://anchor.<tailnet>.ts.net:10000/api/keys -H 'content-type:
 claude mcp add --transport http aurora https://anchor.<tailnet>.ts.net:10000/mcp --header "Authorization: Bearer <key>"
 ```
 
+**Connect Claude.ai or ChatGPT** (their connector dialogs can't send a header; aurora v0.9.1+): make a personal link on
+the server, a secret URL that acts as one workspace, and paste it as the connector URL with **No authentication**.
+```bash
+alias aurora-link='docker compose exec -T aurora node_modules/.bin/tsx packages/server/src/cli.ts link'
+aurora-link new --name claude                       # a fresh workspace; prints the URL once
+aurora-link new --name chatgpt --workspace <id>     # another link to a workspace already in use
+aurora-link list
+aurora-link revoke chatgpt                          # stops at once; the pages stay
+```
+Anyone holding a link can use that workspace: one link per app or person, revoke it if it leaks.
+
 **Upgrade:** set `AURORA_VERSION` in `.env` to a newer tag, then `docker compose up -d --build aurora`.
 
 **Revoke everyone:** change `AURORA_SECRET` in `.env` and restart aurora (all keys stop working; views stay).
